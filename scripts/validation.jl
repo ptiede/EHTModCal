@@ -49,7 +49,7 @@ function main()
       for n in norder
         parsim(data,
                joinpath(outpath,  names[i]*"_order-$n"),
-               models[i](N=n,)
+               models[i](N=n,); print_progress=false
               )
       end
     end
