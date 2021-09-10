@@ -1,28 +1,88 @@
-function _run_model(logj, jscan, sampler; kwargs...)
-    chain, stats = sampler(logj; kwargs...)
+
+
+function _run_model(dir, logj, sampler; kwargs...)
+    chain, stats = sample(sampler, logj; kwargs...)
     logz = stats[:logz]
     logzerr = stats[:logzerr]
-    logl = logl
+    logl = stats[:logl]
 
     sess = 1/sum(abs2, chain.weights)
     echain = TupleVector(sample(chain, Weights(vec(chain.weights)), 2*Int(floor(sess))))
     @info "Nested sampling finished ess = $(sess)"
 
-    DataFrame(chain) |> CSV.write(joinpath(@__DIR__,dir, "Chain",  "nested_chain_scan-$jscan.csv"))
-    DataFrame(echain) |> CSV.write(joinpath(@__DIR__,dir, "Chain",  "equal_chain_scan-$jscan.csv"))
-
     # Construct the image
-    opt = delete(NamedTuple{pnames}(Array(chain[end])), :weights)
-    mopt = Soss.predict(logj.model, opt)[:img]
-    return logz, logzerr, logl, opt, mopt
+    opt = delete(chain[end], :weights)
+    model = Soss.argvals(logj)[:image]
+    mopt = Soss.predict(model, opt[:img])
+    return logz, logzerr, logl, opt, mopt, chain, echain
 end
+
+function nt2df(nt::NamedTuple)
+    df = DataFrame()
+    _nt2df!(df, nt)
+    df
+end
+
+function _nt2df!(df, nt::NamedTuple)
+    for k in keys(nt)
+        _nt2df!(df, nt[k], String(k))
+    end
+end
+
+function _nt2df!(df, nt::NamedTuple, name::String)
+    for k in keys(nt)
+        tmp = name*"_"*String(k)
+        _nt2df!(df, nt[k], tmp)
+    end
+end
+
+function _nt2df!(df, nt::Number, name::String)
+    insertcols!(df, name=>nt)
+end
+
+function _nt2df!(df, nt::AbstractVector, name::String)
+    for (i,v) in enumerate(nt)
+        insertcols!(df, Symbol(name*"_"*"$i") => v)
+    end
+end
+
+function tv2df(tv::TupleVector)
+    df = DataFrame()
+    _tv2df!(df, tv)
+    df
+end
+
+function _tv2df!(df, tv::TupleVector)
+    for k in propertynames(tv)
+        name = String(k)
+        _tv2df!(df, getproperty(tv, Symbol(k)), name)
+    end
+end
+
+function _tv2df!(df, tv::TupleVector, name::String)
+    for k in propertynames(tv)
+        tmp = name*"_"*String(k)
+        _tv2df!(df, getproperty(tv, Symbol(k)), tmp)
+    end
+end
+
+function _tv2df!(df, tv::AbstractVector, name::String)
+    if typeof(tv[1]) <: Number
+        insertcols!(df, Symbol(name) => tv)
+    else
+        s = length(tv[1])
+        for i in 1:s
+            insertcols!(df, Symbol(name*"_"*"$i") => getindex.(tv,i))
+        end
+    end
+end
+
 
 
 function fit_scan(dir::String,
                               model,
                               ampobs::ROSE.EHTObservation{F,A},
                               cpobs::ROSE.EHTObservation{F,P},
-                              jscan::Int,
                               sampler;
                               kwargs...
                               ) where {F,A<:ROSE.EHTVisibilityAmplitudeDatum,
@@ -34,16 +94,17 @@ function fit_scan(dir::String,
     tc = ascube(logj)
     ndim = dimension(tc)
 
-    bl = getdata(ampobs,:bl)
+    bl = ROSE.getdata(ampobs,:baselines)
     s1 = unique(first.(bl))
     s2 = unique(last.(bl))
     stations = unique([s1...,s2...])
 
 
-    logz, logzerr, logl, opt, mopt = _run_model(logj, jscan, sampler; kwargs...)
+    logz, logzerr, logl, opt, mopt, chain, echain = _run_model(dir, logj, sampler; kwargs...)
+    GC.gc()
 
 
-    gs = Soss.predict(logj.model, opt)[:g]
+    gs = Soss.predict(argvals(logj)[:gamps], opt[:g])
     achi2 = ROSESoss.chi2(mopt, ampobs, gs)
     cpchi2 = ROSESoss.chi2(mopt, cpobs)
     rchi2 = (achi2+cpchi2)/(ROSE.nsamples(ampobs)+ROSE.nsamples(cpobs)-ndim)
@@ -52,23 +113,24 @@ function fit_scan(dir::String,
     machi2 = (achi2)/(ROSE.nsamples(ampobs))
     mcpchi2 = (cpchi2)/(ROSE.nsamples(cpobs))
     @info "Reduced chi square: $rchi2"
+    stats = merge((time = tstart, rchi2=rchi2, rampchi2=rachi2, rcpchi2=rcpchi2,
+                   mampchi2=machi2, mcpchi2=mcpchi2,
+                   logz=logz, logzerr=logzerr, logl=logl), opt)
 
-    return merge((time = tstart, rchi2=rchi2, rampchi2=rachi2, rcpchi2=rcpchi2,
-                    mampchi2=machi2, mcpchi2=mcpchi2,
-                    logz=logz, logzerr=logzerr, logl=logl), opt)
+
+    return chain, echain, stats
 end
+
+
+
 
 function fit_scan(dir::String,
     model,
     ampobs::ROSE.EHTObservation{F,A},
     cpobs::ROSE.EHTObservation{F,P},
-    jscan::Int,
     sampler;
-    fitgains=false,
-    plot_results=true,
-    obschar=ROSESoss.ObsChar(),
     kwargs...
-    ) where {F,A<:ROSE.EHTLogClosure,
+    ) where {F,A<:ROSE.EHTLogClosureAmplitudeDatum,
                P<:ROSE.EHTClosurePhaseDatum}
 
     tstart = round(ampobs[1].time, digits=2)
@@ -77,7 +139,7 @@ function fit_scan(dir::String,
     tc = ascube(logj)
     ndim = dimension(tc)
 
-    logz, logzerr, logl, opt, mopt = _run_model(logj, jscan, sampler; kwargs...)
+    logz, logzerr, logl, opt, mopt, chain, echain = _run_model(dir, logj, sampler; kwargs...)
 
     achi2 = ROSESoss.chi2(mopt, ampobs)
     cpchi2 = ROSESoss.chi2(mopt, cpobs)
@@ -89,15 +151,15 @@ function fit_scan(dir::String,
     @info "Reduced chi square: $rchi2"
 
 
-    return merge((time = tstart, rchi2=rchi2, rampchi2=rachi2, rcpchi2=rcpchi2,
+    stats = merge((time = tstart, rchi2=rchi2, rampchi2=rachi2, rcpchi2=rcpchi2,
                     mampchi2=machi2, mcpchi2=mcpchi2,
                     logz=logz, logzerr=logzerr, logl=logl), opt)
+    return chain, echain, stats
 end
 
 function fit_scan(dir::String,
                               model,
                               ampobs::ROSE.EHTObservation{F,A},
-                              jscan::Int,
                               sampler;
                               kwargs...
                               ) where {F,A<:ROSE.EHTVisibilityAmplitudeDatum}
@@ -109,7 +171,7 @@ function fit_scan(dir::String,
     ndim = dimension(tc)
 
 
-    logz, logzerr, logl, opt, mopt = _run_model(logj, jscan, sampler; kwargs...)
+    logz, logzerr, logl, opt, mopt, chain, echain = _run_model(dir, logj, sampler; kwargs...)
 
     achi2 = ROSESoss.chi2(mopt, ampobs, gs)
     rchi2 = (achi2)/(ROSE.nsamples(ampobs)-ndim)
@@ -117,9 +179,11 @@ function fit_scan(dir::String,
     machi2 = (achi2)/(ROSE.nsamples(ampobs))
     @info "Reduced chi square: $rchi2"
 
-    return merge((time = tstart, rchi2=rchi2, rampchi2=rachi2,
+    stats = merge((time = tstart, rchi2=rchi2, rampchi2=rachi2,
                     mampchi2=machi2,
                     logz=logz, logzerr=logzerr, logl=logl), opt)
+    return chain, echain, stats
+
 end
 
 function fit_scan(dir::String,
@@ -134,7 +198,7 @@ function fit_scan(dir::String,
     tc = ascube(logj)
     ndim = dimension(tc)
 
-    logz, logzerr, logl, opt, mopt = _run_model(logj, jscan, sampler; kwargs...)
+    logz, logzerr, logl, opt, mopt, chain, echain = _run_model(dir, logj, sampler; kwargs...)
 
 
 
@@ -144,7 +208,10 @@ function fit_scan(dir::String,
     @info "Reduced chi square: $rchi2"
 
 
-    return merge((time = tstart, rchi2=rchi2,
+    stats = merge((time = tstart, rchi2=rchi2,
                     mchi2=mchi2,
                     logz=logz, logzerr=logzerr, logl=logl), opt)
+
+    return chain, echain, stats
+
 end
