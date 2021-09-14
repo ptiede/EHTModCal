@@ -428,6 +428,12 @@ git-tree-sha1 = "089b6dc3f3c4d651142724386fd37b508f30e4d4"
 uuid = "6c76993d-992e-5bf1-9e63-34920a5a5a38"
 version = "0.4.2"
 
+[[EHTModelStacker]]
+deps = ["CSV", "CairoMakie", "DataFrames", "Distributions", "DrWatson", "HDF5", "KernelDensity", "MeasureTheory", "NPZ", "ParameterHandling", "PyCall", "Soss", "StatsBase", "StatsFuns", "TupleVectors"]
+path = "/home/ptiede/.julia/dev/EHTModelStacker"
+uuid = "3b0111de-d5c8-4b6e-a1b3-8f46034c2286"
+version = "0.1.0"
+
 [[EarCut_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
 git-tree-sha1 = "3f3a2501fa7236e9b911e0f7a588c657e822bb6d"
