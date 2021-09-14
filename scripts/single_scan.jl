@@ -38,7 +38,10 @@ function singlescan_vacp(obsfile,
                  model;
                  kwargs...
                  )
+
     makedirs(outdir)
+    
+    isfile(joinpath(outdir, "Chain",  "nested_chain_scan-$scan.csv")) && return nothing
 
     #Load data
     obs = ehtim.obsdata.load_uvfits(obsfile)
@@ -121,6 +124,6 @@ end
 
 
 macro getmodel(m)
-    sm = last(split("$m", "."))
+    sm = quote last(split("$(m)", ".")) end
     return sm
 end

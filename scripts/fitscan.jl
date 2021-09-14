@@ -1,5 +1,7 @@
+
+
 function _run_model(dir, logj, sampler; kwargs...)
-    chain, stats = sampler(logj; kwargs...)
+    chain, stats = sample(sampler, logj; kwargs...)
     logz = stats[:logz]
     logzerr = stats[:logzerr]
     logl = stats[:logl]
@@ -99,6 +101,7 @@ function fit_scan(dir::String,
 
 
     logz, logzerr, logl, opt, mopt, chain, echain = _run_model(dir, logj, sampler; kwargs...)
+    GC.gc()
 
 
     gs = Soss.predict(argvals(logj)[:gamps], opt[:g])
