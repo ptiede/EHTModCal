@@ -1,7 +1,6 @@
 @everywhere begin
 using Pkg; Pkg.activate("../")
 end
-
 @everywhere using DrWatson
 @everywhere begin
 @quickactivate "EHTModCal" 
@@ -33,9 +32,9 @@ end
 
 function main()
 
-    norder = 1:4
-    models = [ROSESoss.mring, ROSESoss.mringwfloor, ROSESoss.smring, ROSESoss.smringwfloor]
-    names  = ["mring", "mring_floor", "mring_stretch", "mring_stretch_floor"]
+   norder = [4]
+    models = [ROSESoss.mringwfloor, ROSESoss.smringwfloor]
+    names  = ["mring_floor", "mring_stretch_floor"]
     data = datadir("sims",
                    "ValidationData", 
                    "ehtim_thermal_phase_amp_preprocessing",
@@ -49,7 +48,7 @@ function main()
       for n in norder
         parsim(data,
                joinpath(outpath,  names[i]*"_order-$n"),
-               models[i](N=n,); print_progress=false
+               models[i](N=n,); print_progress=false, dlogz=1.5
               )
       end
     end

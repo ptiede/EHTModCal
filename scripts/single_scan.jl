@@ -68,7 +68,7 @@ function singlescan_vacp(obsfile,
                 fit_scan(outdir,
                     model,
                     ampobs, cpobs,
-                    dynesty_sampler;
+                    DynestyStatic(nlive=400);
                     kwargs...,
                     )
     println("Done fit writing results to disk")
@@ -101,19 +101,11 @@ function singlescan_lcacp(obsfile,
     cpobs = ROSESoss.extract_cphase(obs)
 
     println("Start fit")
-    dsum = fit_scan(outdir,
-           model,
-           ampobs, cpobs,
-           scan,
-           dynesty_sampler;
-           kwargs...,
-           )
-    println("Start fit")
     chain, echain, stats =
                 fit_scan(outdir,
                     model,
                     ampobs, cpobs,
-                    dynesty_sampler;
+                    DynestyStatic(nlive=400);
                     kwargs...,
                     )
     println("Done fit writing results to disk")
