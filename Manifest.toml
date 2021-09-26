@@ -494,7 +494,7 @@ uuid = "6c76993d-992e-5bf1-9e63-34920a5a5a38"
 version = "0.4.2"
 
 [[EHTModelStacker]]
-deps = ["CSV", "CairoMakie", "DataFrames", "Distributions", "DrWatson", "HDF5", "KernelDensity", "MeasureTheory", "NPZ", "ParameterHandling", "PyCall", "Soss", "StatsBase", "StatsFuns", "TupleVectors"]
+deps = ["CSV", "DataFrames", "Distributions", "HDF5", "KernelDensity", "LoopVectorization", "MeasureTheory", "NPZ", "ParameterHandling", "PyCall", "StatsBase", "StatsFuns", "TupleVectors"]
 path = "/home/ptiede/.julia/dev/EHTModelStacker"
 uuid = "3b0111de-d5c8-4b6e-a1b3-8f46034c2286"
 version = "0.1.0"
@@ -1725,6 +1725,12 @@ deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
 git-tree-sha1 = "68db32dff12bb6127bac73c209881191bf0efbb7"
 uuid = "f50d1b31-88e8-58de-be2c-1cc44531875f"
 version = "0.3.0+0"
+
+[[RobustAdaptiveMetropolisSampler]]
+deps = ["Distributions", "LinearAlgebra", "PDMats", "ProgressMeter", "Random"]
+git-tree-sha1 = "22919644d9b377147adfb4620ba0734c2968a42e"
+uuid = "2f96e190-b8a6-11e9-0b3d-5fbd22c21613"
+version = "1.1.0"
 
 [[RuntimeGeneratedFunctions]]
 deps = ["ExprTools", "SHA", "Serialization"]
