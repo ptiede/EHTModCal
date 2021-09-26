@@ -435,7 +435,7 @@ uuid = "6c76993d-992e-5bf1-9e63-34920a5a5a38"
 version = "0.4.2"
 
 [[EHTModelStacker]]
-deps = ["CSV", "CairoMakie", "DataFrames", "Distributions", "DrWatson", "HDF5", "KernelDensity", "MeasureTheory", "NPZ", "ParameterHandling", "PyCall", "Soss", "StatsBase", "StatsFuns", "TupleVectors"]
+deps = ["CSV", "DataFrames", "Distributions", "HDF5", "KernelDensity", "LoopVectorization", "MeasureTheory", "NPZ", "ParameterHandling", "PyCall", "StatsBase", "StatsFuns", "TupleVectors"]
 path = "/home/ptiede/.julia/dev/EHTModelStacker"
 uuid = "3b0111de-d5c8-4b6e-a1b3-8f46034c2286"
 version = "0.1.0"
@@ -1086,9 +1086,9 @@ version = "0.3.0"
 
 [[MKL_jll]]
 deps = ["Artifacts", "IntelOpenMP_jll", "JLLWrappers", "LazyArtifacts", "Libdl", "Pkg"]
-git-tree-sha1 = "c253236b0ed414624b083e6b72bfe891fbd2c7af"
+git-tree-sha1 = "5455aef09b40e5020e1520f551fa3135040d4ed0"
 uuid = "856f044c-d86e-5d09-b602-aeab76dc8ba7"
-version = "2021.1.1+1"
+version = "2021.1.1+2"
 
 [[MLStyle]]
 git-tree-sha1 = "594e189325f66e23a8818e5beb11c43bb0141bcd"
@@ -1550,7 +1550,7 @@ version = "0.1.0"
 
 [[ROSESoss]]
 deps = ["Distributions", "HypercubeTransform", "MLStyle", "MacroTools", "MeasureTheory", "NamedTupleTools", "NestedTuples", "ParameterHandling", "PyCall", "ROSE", "Random", "Reexport", "Requires", "Soss", "StatsBase", "StructArrays", "TransformVariables", "TupleVectors"]
-git-tree-sha1 = "b40ccc86ff21fa46c4f3a91b55ee131a331d3c02"
+git-tree-sha1 = "491b18d2c7602ab85900522e88e130161ea0aa7f"
 repo-rev = "main"
 repo-url = "https://github.com/ptiede/ROSESoss.jl"
 uuid = "b453e4c4-4bcd-41c2-b157-cea5ea685e94"
@@ -1647,6 +1647,12 @@ deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
 git-tree-sha1 = "68db32dff12bb6127bac73c209881191bf0efbb7"
 uuid = "f50d1b31-88e8-58de-be2c-1cc44531875f"
 version = "0.3.0+0"
+
+[[RobustAdaptiveMetropolisSampler]]
+deps = ["Distributions", "LinearAlgebra", "PDMats", "ProgressMeter", "Random"]
+git-tree-sha1 = "22919644d9b377147adfb4620ba0734c2968a42e"
+uuid = "2f96e190-b8a6-11e9-0b3d-5fbd22c21613"
+version = "1.1.0"
 
 [[RuntimeGeneratedFunctions]]
 deps = ["ExprTools", "SHA", "Serialization"]
