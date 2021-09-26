@@ -1,10 +1,14 @@
 name = "EHTModCal"
 
 [deps]
+ArgParse = "c7e460c6-2fb9-53a9-8c5b-16f535851c63"
 BlackBoxOptim = "a134a8b2-14d6-55f6-9291-3336d3ab0209"
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
 Chain = "8be319e6-bccf-4806-a6f7-6fae938471bc"
+ClusterManagers = "34f1f09b-3a8b-5176-ab39-66d58a4d544e"
+Comonicon = "863f3e99-da2a-4334-8734-de3dacbe5542"
+Dagger = "d58978e5-989f-55fb-8d15-ea34adc7bf54"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 DrWatson = "634d3b9d-ee7a-5ddf-bec9-22491ea816e1"

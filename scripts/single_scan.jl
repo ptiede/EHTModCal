@@ -17,7 +17,6 @@ using TupleVectors
 include(scriptsdir("fitscan.jl"))
 
 
-@everywhere begin
 """
     makedirs(dir)
 Makes the directory and subdirs that the scripts need
@@ -30,7 +29,6 @@ function makedirs(dir)
     mkpath(joinpath(dir, "Stats"))
 end
 
-end #@eveywhere
 
 
 function singlescan_vacp(obsfile,
@@ -68,12 +66,12 @@ function singlescan_vacp(obsfile,
                 fit_scan(outdir,
                     model,
                     ampobs, cpobs,
-                    DynestyStatic(nlive=400);
+                    DynestyStatic(nlive=1000);
                     kwargs...,
                     )
     println("Done fit writing results to disk")
     CSV.write(joinpath(outdir, "Stats", "summary_stats-$scan.csv"), nt2df(stats))
-    tv2df(chain) |> CSV.write(joinpath(outdir, "Chain",  "nested_chain_scan-$scan.csv"))
+    #tv2df(chain) |> CSV.write(joinpath(outdir, "Chain",  "nested_chain_scan-$scan.csv"))
     tv2df(echain) |> CSV.write(joinpath(outdir, "Chain",  "equal_chain_scan-$scan.csv"))
 
     nothing
@@ -86,32 +84,49 @@ function singlescan_lcacp(obsfile,
     kwargs...
     )
     makedirs(outdir)
+    println(outdir)
     #Create output this does it relative to the directory this file is in
     open(joinpath(outdir, "params-$scan.dat"), "w") do io
-    println(io, "Fitting Datafile: ", obsfile)
-    println(io, "Using model: \n", model)
+      println(io, "Fitting Datafile: ", obsfile)
+      println(io, "Using model: \n", model)
     end
 
     #Load data
     obs = ehtim.obsdata.load_uvfits(obsfile)
-    obs.add_cphase(count="min-cut0bl")
-    obs.add_logcamp(debias=true, count="min")
-    #convert to ROSE EHTObservation objects
-    ampobs = ROSESoss.extract_lcamps(obs)
+    
+    try
+      obs.add_logcamp(debias=true, count="min")
+    catch 
+      @warn "Warning no quadrangle so skipping scan $scan"
+      return nothing
+    end
+     obs.add_cphase(count="min-cut0bl")
+
+
+
+
+    ampobs = ROSESoss.extract_lcamp(obs)
     cpobs = ROSESoss.extract_cphase(obs)
+    
+
+    open(joinpath(outdir, "params-$scan.dat"), "w") do io
+        println(io, "Fitting Datafile: ", obsfile)
+        println(io, "Using model: \n", model)
+    end
 
     println("Start fit")
     chain, echain, stats =
                 fit_scan(outdir,
                     model,
                     ampobs, cpobs,
-                    DynestyStatic(nlive=400);
+                    DynestyStatic(nlive=1000);
                     kwargs...,
                     )
     println("Done fit writing results to disk")
     CSV.write(joinpath(outdir, "Stats", "summary_stats-$scan.csv"), nt2df(stats))
-    tv2df(chain) |> CSV.write(joinpath(outdir, "Chain",  "nested_chain_scan-$scan.csv"))
+    #tv2df(chain) |> CSV.write(joinpath(outdir, "Chain",  "nested_chain_scan-$scan.csv"))
     tv2df(echain) |> CSV.write(joinpath(outdir, "Chain",  "equal_chain_scan-$scan.csv"))
+    nothing
 end
 
 

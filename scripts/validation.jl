@@ -1,6 +1,7 @@
 @everywhere begin
 using Pkg; Pkg.activate("../")
 end
+using ArgParse
 @everywhere using DrWatson
 @everywhere begin
 @quickactivate "EHTModCal" 
@@ -30,30 +31,42 @@ end
 end
 
 
-function main()
+function main(args)
 
-   norder = [4]
+    s = ArgParseSettings(description="Run the Validation set with different mring orders")
+
+    @add_arg_table! s begin
+      "--norder"
+        nargs = '?'
+        arg_type = Int
+        default = 1
+        help = "mring order to fit"
+    end
+
+    parsed_args = parse_args(args,s)
+    println(parsed_args)
+    n = parsed_args["norder"]
+
+    println("Order= $n")
     models = [ROSESoss.mringwfloor, ROSESoss.smringwfloor]
     names  = ["mring_floor", "mring_stretch_floor"]
     data = datadir("sims",
                    "ValidationData", 
-                   "ehtim_thermal_phase_amp_preprocessing",
-                   "ehtim_thermal_phase_amp_preprocessing/")
+                   "ehtim_thermal_preprocessing/")
     outpath =  projectdir("_research",
                       "ValidationRuns",
                       "ehtim_geometric_model",
-                      "ehtim_thermal_phase_amp_preprocessing") 
+                      "ehtim_thermal_preprocessing") 
  
     for i in eachindex(models,names)
-      for n in norder
         parsim(data,
                joinpath(outpath,  names[i]*"_order-$n"),
                models[i](N=n,); print_progress=false, dlogz=1.5
               )
-      end
     end
 end
 
 
-main()
+main(ARGS)
+
 
