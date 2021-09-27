@@ -156,7 +156,7 @@ function frames_uncert(chainfiles, mfile, time, nsamples, outname)
 end
 
 
-function average_chain_diag(build_model, mins, maxs, chain; nlive=500)
+function average_chain_diag(build_model, mins, maxs, chain; nlive=1500)
     priors = (μ = Product(Uniform.(mins, maxs)), σ = Product(Uniform.(0.0, maxs .- mins)))
     t = ascube(priors)
     p0 = HypercubeTransform.transform(t, fill(0.5, dimension(t)))
@@ -170,7 +170,7 @@ function average_chain_diag(build_model, mins, maxs, chain; nlive=500)
     res = sampler.results
     samples, weights = res["samples"], exp.(res["logwt"] .- res["logz"][end])
     tv = TupleVector([unflatten(Vector(x)) for x in eachrow(samples)])
-    echain = TupleVector(sample(tv, Weights(weights), 2000))
+    echain = TupleVector(sample(tv, Weights(weights), 4000))
     return echain
 
 end
@@ -206,7 +206,6 @@ function _mkdf(echain, keys)
     df = DataFrame()
     for (i,k) in enumerate(keys)
         insertcols!(df, Symbol("μ_"*String(k))=>getindex.(echain.μ, i))
-        insertcols!(df, Symbol("σ_"*String(k))=>getindex.(echain.σ, i))
     end
     for (i,k) in enumerate(keys)
         insertcols!(df, Symbol("σ_"*String(k))=>getindex.(echain.σ, i))
@@ -260,9 +259,9 @@ end
 
 function quickprocess(cfile; plotres=true, tmin=0, tmax=1e30)
     mins, maxs, quants, labels = parsechainpath(cfile)
-    outdir = joinpath(dirname(cfile), "ChainHA")
+    outdir = joinpath(cfile, "ChainHA")
 
-    process(cfile, mins, maxs, quants, labels, outdir; plotres, tmin, tmax)
+    process(joinpath(cfile, "chain.h5"), mins, maxs, quants, labels, outdir; plotres, tmin, tmax)
 
 end
 
