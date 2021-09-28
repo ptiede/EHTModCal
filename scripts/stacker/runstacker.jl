@@ -227,7 +227,12 @@ function parsechainpath(cfile)
     quants = [:img_diam, :img_fwhm, :img_f]
     labels = ["diameter (μas)", "width (μas)", "flux (Jy)"]
 
-    if occursin("floor", model)
+    if occursin("gfloor", model)
+        push!(mins, 0.0, 10.0)
+        push!(maxs, 1.0, 90.0)
+        push!(quants, :img_floor, :img_dg)
+        push!(labels, "floor flux fraction", "Gaussian diameter")
+    elseif occursin("gfloor", model)
         push!(mins, 0.0)
         push!(maxs, 1.0)
         push!(quants, :img_floor)
