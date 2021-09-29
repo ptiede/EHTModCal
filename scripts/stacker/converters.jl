@@ -4,6 +4,8 @@ function loadmodel(dir)
 
     if occursin("mring_floor_order", model)
         img = ROSESoss.mringwfloor(N=order,)
+    elseif occursin("mring_gfloor_order", model)
+        img = ROSESoss.mringwgfloor(N=order,)
     elseif occursin("mring_order", model)
         img = ROSESoss.mring(N=order,)
     elseif occursin("mring_floor_stretch_order", model)
@@ -68,7 +70,7 @@ function parsechainpath(cfile)
         push!(quants, Symbol("img_ma_$i"), Symbol("img_mp_$i"))
         push!(mins, 0.0, -1π)
         push!(maxs, 0.5, 1π)
-        push!(labels, "m=$i amp", "m=1 phase (rad) W of N")
+        push!(labels, "m=$i amp", "m=$i phase (rad) W of N")
         push!(wrapped, false, true)
     end
 
