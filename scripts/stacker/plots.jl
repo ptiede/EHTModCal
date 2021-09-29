@@ -157,6 +157,9 @@ function summarize_ha(cfile)
     fig = Figure(resolution=(400,400))
     ax = Axis(fig[1,1], xlabel="Diameter", ylabel="fractional width")
     scatter!(ax, tv.diam, tv.fwhm./tv.diam, label="Delta diam")
+    diamdb = @. tv.diam - 1/(4*log(2))*tv.fwhm^2/tv.diam
+    scatter!(ax, diamdb, tv.fwhm./tv.diam, label="Peak diam")
+
     if occursin("_floor_order", cfile)
         scatter!(ax, tv.diam./(1 .+ 0.6*tv.floor), tv.fwhm./tv.diam, label="Effective diam")
     end
@@ -166,9 +169,9 @@ function summarize_ha(cfile)
     display(fig)
     save(joinpath(dirname(cfile), "corr_image.png"), fig)
 
-    fig = plotchi2(dirname(dirname(cfile)))
-    display(fig)
-    save(joinpath(dirname(cfile), "chi2_image.png"), fig)
+    #fig = plotchi2(dirname(dirname(cfile)))
+    #display(fig)
+    #save(joinpath(dirname(cfile), "chi2_image.png"), fig)
 
 end
 
