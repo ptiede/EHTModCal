@@ -48,8 +48,6 @@ function average_chain_diag(build_model, mins, maxs, wrapped, chain; nlive=1500)
 end
 
 
-
-
 function quickprocess(cfile; plotres=true, tmin=0, tmax=1e30, nlive=1500)
     mins, maxs, wrapped, quants, labels = parsechainpath(cfile)
     outdir = joinpath(cfile, "ChainHA_W")

@@ -42,7 +42,13 @@ function parsechainpath(cfile)
     labels = ["diameter (μas)", "width (μas)", "flux (Jy)"]
     wrapped = Bool[false, false, false]
 
-    if occursin("floor", model)
+    if occursin("gfloor", model)
+        push!(mins, 0.0, 10.0)
+        push!(maxs, 1.0, 90.0)
+        push!(quants, :img_floor, :img_dg)
+        push!(wrapped, false, false)
+        push!(labels, "floor flux fraction", "Gaussian diameter")
+    elseif occursin("floor", model)
         push!(mins, 0.0)
         push!(maxs, 1.0)
         push!(quants, :img_floor)
