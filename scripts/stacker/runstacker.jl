@@ -34,12 +34,12 @@ function constructlppt(build_model, mins, maxs, wrapped, chain)
     fp0, unflatten = ParameterHandling.flatten(p0)
     lp = build_loglklhd(build_model, chain, mins, maxs, wrapped)∘unflatten
     pt(x) = first(ParameterHandling.flatten(HypercubeTransform.transform(t, x)))
-    return lp, pt, unflatten
+    return lp, pt, unflatten, dimension(t)
 end
 
 function average_chain_diag(build_model, mins, maxs, wrapped, chain; nlive=1500)
-    lp, pt, unflatten = constructlppt(build_model, mins, max, wrapped, chain)
-    sampler = dynesty.NestedSampler(lp, pt, dimension(t), nlive=nlive)
+    lp, pt, unflatten, dim = constructlppt(build_model, mins, max, wrapped, chain)
+    sampler = dynesty.NestedSampler(lp, pt, dim, nlive=nlive)
     sampler.run_nested()
     res = sampler.results
     samples, weights = res["samples"], exp.(res["logwt"] .- res["logz"][end])
