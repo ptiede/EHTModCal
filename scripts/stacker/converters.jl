@@ -44,7 +44,7 @@ function parsechainpath(cfile)
 
     if occursin("gfloor", model)
         push!(mins, 0.0, 10.0)
-        push!(maxs, 1.0, 90.0)
+        push!(maxs, 1.0, 200.0)
         push!(quants, :img_floor, :img_dg)
         push!(wrapped, false, false)
         push!(labels, "floor flux fraction", "Gaussian diameter")

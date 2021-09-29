@@ -62,7 +62,7 @@ end
 function process(cfile, mins, maxs, wrapped, quants, labels, outdir; plotres=true, tmin=0, tmax=1e30, nlive=1500)
     #diameter
     mkpath(outdir)
-    chain = ChainH5(cfile, quants, 100)
+    chain = ChainH5(cfile, quants, 1_000)
     chainall = restricttime(chain, tmin, tmax)
     echain = average_chain_diag(build_model_all, mins, maxs, wrapped, chainall; nlive)
     df = _mkdf(echain, keys(chainall))
