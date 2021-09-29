@@ -144,6 +144,17 @@ function generatemovie(dir; bt=true, nsamples=100)
     meanmovie(model, chain, nsamples, joinpath(dir, "mean_movie.gif"))
 end
 
+function plotcollage(m, tv, dims=(5,5))
+    fig = Figure(resolution=(800,800))
+    axes = [Axis(fig[i,j], xreversed=true, aspect=DataAspect()) for i in 1:dims[1], j in 1:dims[2]]
+    for ax in axes
+        ind = rand(1:length(tv))
+        plotim!(ax, m, tv[ind])
+        hidedecorations!(ax)
+    end
+    return fig
+end
+
 function summarize_ha(cfile)
     chainha = CSV.File(cfile) |> DataFrame
     tv = df2tv(chainha)
@@ -153,6 +164,11 @@ function summarize_ha(cfile)
     fig.current_axis.x.title = basename(dirname(dirname(cfile)))
     display(fig)
     save(joinpath(dirname(cfile), "mean_image.png"), fig)
+
+    fig = plotcollage(m, tv)
+    display(fig)
+    save(joinpath(dirname(cfile), "collage.png"), fig)
+
 
     fig = Figure(resolution=(400,400))
     ax = Axis(fig[1,1], xlabel="Diameter", ylabel="fractional width")
@@ -180,43 +196,21 @@ function plotim(model, p::NamedTuple)
     mim = intensitymap(img, 256, 256, 150.0, 150.0)
     fig = Figure(resolution=(400,400))
     ax = Axis(fig[1,1], aspect=DataAspect(),xlabel="RA (μas)", ylabel="DEC (μas)", xreversed=true)
-    image!(ax, ROSE.imagepixels(mim)..., mim', colormap=:afmhot)
+    image!(ax, ROSE.imagepixels(mim)..., mim', colormap=:viridis)
     return fig
 end
 
 
-
-
-function comboavgplot(fchainsa, fcsa, outname)
-    chainsa = ChainH5(fchainsa, "diam", 2000)
-    csa = CSV.File(fcsa) |> DataFrame
-
-    fig = Figure(resolution=(600, 800))
-    ax = Axis(fig, ylabel="Probability Density")
-    axsa = Axis(fig)
-    kμ = kde(csa[:,:μ])
-    lower = fill(0.0, length(kμ.x))
-    upper = kμ.density
-    lines!(ax, kμ.x, upper, color=(:black, 0.2))
-    band!(ax, kμ.x, lower, upper, color=(:blue, 0.5), label="μ diameter")
-    ridge(axsa, chainsa)
-    fig[1,1] = ax
-    fig[2,1] = axsa
-    rowsize!(fig.layout, 2, Relative(3/4))
-    kσ = kde(csa[:,:σ])
-    errorbars!(ax, mean(csa[:,:μ]), fill(mean(kμ.density), 1), 2.0*quantile(csa[:,:σ], 0.5), whiskerwidth = 10,
-              direction = :x, label="σ diameter")
-
-    linkxaxes!(axsa, ax)
-    hidexdecorations!(ax, grid=false, ticks=false)
-    axsa.xlabel = "diameter (μas)"
-    axislegend(ax, framevisible=false)
-    xlims!(ax, 25.0,85.0)
-    save(outname, fig)
-
-    display(fig)
-    return fig
+function plotim!(ax, model, p::NamedTuple)
+    img = Soss.predict(model, p)
+    mim = intensitymap(img, 256, 256, 150.0, 150.0)
+    image!(ax, ROSE.imagepixels(mim)..., mim', colormap=:viridis)
+    lines!(ax, [10,60],[-60, -60], color=:white)
+    text!(ax, "50 μas", position = (35, -50), align=(:center, :baseline), color=:white, textsize=10)
 end
+
+
+
 
 function violin_all(dir, quant; mod=(x->1*x))
     dirs = filter(isdir, readdir(dir, join=true))

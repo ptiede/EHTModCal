@@ -25,8 +25,7 @@ include(joinpath(@__DIR__,"build_prob.jl"))
 include(joinpath(@__DIR__,"converters.jl"))
 include(joinpath(@__DIR__,"plots.jl"))
 
-
-function average_chain_diag(build_model, mins, maxs, wrapped, chain; nlive=1500)
+function constructlppt(build_model, mins, maxs, wrapped, chain)
     @assert length(mins)==length(maxs)
     @assert length(wrapped)==length(maxs)
     priors = (μ = Product(Uniform.(mins, maxs)), σ = Product(Uniform.(0.01, maxs .- mins)))
@@ -35,8 +34,11 @@ function average_chain_diag(build_model, mins, maxs, wrapped, chain; nlive=1500)
     fp0, unflatten = ParameterHandling.flatten(p0)
     lp = build_loglklhd(build_model, chain, mins, maxs, wrapped)∘unflatten
     pt(x) = first(ParameterHandling.flatten(HypercubeTransform.transform(t, x)))
+    return lp, pt, unflatten
+end
 
-    # return lp, pt, unflatten
+function average_chain_diag(build_model, mins, maxs, wrapped, chain; nlive=1500)
+    lp, pt, unflatten = constructlppt(build_model, mins, max, wrapped, chain)
     sampler = dynesty.NestedSampler(lp, pt, dimension(t), nlive=nlive)
     sampler.run_nested()
     res = sampler.results
