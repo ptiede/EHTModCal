@@ -43,16 +43,20 @@ function singlescan_vacp(obsfile,
 
     #Load data
     obs = ehtim.obsdata.load_uvfits(obsfile)
-    obs.add_cphase(count="min-cut0bl")
     obs.add_amp(debias=true)
     #convert to ROSE EHTObservation objects
     ampobs = ROSESoss.extract_amps(obs)
-    cpobs = ROSESoss.extract_cphase(obs)
-
     bl = ROSE.getdata(ampobs,:baselines)
     s1 = unique(first.(bl))
     s2 = unique(last.(bl))
     stations = unique([s1...,s2...])
+    if length(stations) < 4
+      return nothing
+    end
+    
+    obs.add_cphase(count="min-cut0bl")
+    cpobs = ROSESoss.extract_cphase(obs)
+
     #Create output this does it relative to the directory this file is in
     open(joinpath(outdir, "params-$scan.dat"), "w") do io
         println(io, "Fitting Datafile: ", obsfile)
@@ -66,7 +70,7 @@ function singlescan_vacp(obsfile,
                 fit_scan(outdir,
                     model,
                     ampobs, cpobs,
-                    DynestyStatic(nlive=1000);
+                    DynestyStatic(nlive=2000);
                     kwargs...,
                     )
     println("Done fit writing results to disk")
@@ -119,7 +123,7 @@ function singlescan_lcacp(obsfile,
                 fit_scan(outdir,
                     model,
                     ampobs, cpobs,
-                    DynestyStatic(nlive=1000);
+                    DynestyStatic(nlive=2000);
                     kwargs...,
                     )
     println("Done fit writing results to disk")
