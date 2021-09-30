@@ -4,7 +4,7 @@ end
 using ArgParse
 @everywhere using DrWatson
 @everywhere begin
-@quickactivate "EHTModCal" 
+@quickactivate "EHTModCal"
 end
 using Printf
 @everywhere begin
@@ -75,15 +75,15 @@ function main(args)
                         stime,
                         "noisefrac0.02"
                         )
-    
+
     println("Order= $n")
     models = [ROSESoss.mringwgfloor]
     names  = ["mring_gfloor"]
- 
+
     for i in eachindex(models,names)
         parsim(ddir,
                joinpath(outpath,  names[i]*"_order-$n"),
-               models[i](N=n,); 
+               models[i](N=n, fmin=0.8, fmax=1.2);
                print_progress=false, dlogz=1.5
               )
     end
@@ -91,7 +91,3 @@ end
 
 
 main(ARGS)
-
-
-
-

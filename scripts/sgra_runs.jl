@@ -4,7 +4,7 @@ end
 using ArgParse
 @everywhere using DrWatson
 @everywhere begin
-@quickactivate "EHTModCal" 
+@quickactivate "EHTModCal"
 end
 
 @everywhere begin
@@ -67,7 +67,7 @@ function main(args)
     models = [ROSESoss.mring, ROSESoss.mringwgfloor]
     names  = ["mring", "mring_gfloor"]
     ddir = datadir("exp_pro",
-                   "preprocessed_data", 
+                   "preprocessed_data",
                    data,
                    day,
                    band,
@@ -81,11 +81,11 @@ function main(args)
                       "snapshot_$stime",
                       "noisefrac0.02")
     println("Saving to $(outpath)")
- 
+
     for i in eachindex(models,names)
         parsim(ddir,
                joinpath(outpath,  names[i]*"_order-$n"),
-               models[i](N=n,); 
+               models[i](N=n, fmin=0.8, fmax=1.2);
                print_progress=false
               )
     end
@@ -93,5 +93,3 @@ end
 
 
 main(ARGS)
-
-

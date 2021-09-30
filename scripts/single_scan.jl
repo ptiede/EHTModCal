@@ -38,7 +38,7 @@ function singlescan_vacp(obsfile,
                  )
 
     makedirs(outdir)
-    
+
     isfile(joinpath(outdir, "Chain",  "nested_chain_scan-$scan.csv")) && return nothing
 
     #Load data
@@ -53,7 +53,7 @@ function singlescan_vacp(obsfile,
     if length(stations) < 4
       return nothing
     end
-    
+
     obs.add_cphase(count="min-cut0bl")
     cpobs = ROSESoss.extract_cphase(obs)
 
@@ -97,10 +97,10 @@ function singlescan_lcacp(obsfile,
 
     #Load data
     obs = ehtim.obsdata.load_uvfits(obsfile)
-    
+
     try
       obs.add_logcamp(debias=true, count="min")
-    catch 
+    catch
       @warn "Warning no quadrangle so skipping scan $scan"
       return nothing
     end
@@ -111,7 +111,7 @@ function singlescan_lcacp(obsfile,
 
     ampobs = ROSESoss.extract_lcamp(obs)
     cpobs = ROSESoss.extract_cphase(obs)
-    
+
 
     open(joinpath(outdir, "params-$scan.dat"), "w") do io
         println(io, "Fitting Datafile: ", obsfile)
