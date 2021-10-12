@@ -1,4 +1,4 @@
-function build_model_all(θ::NamedTuple, mins, maxs, wrapped)
+function EHTModelStacker.SnapshotWeights(θ, mins, maxs, wrapped, batchsize)
     μ, σ = θ.μ, θ.σ
     dists = Union{EHTModelStacker.NormalFast{Float64}, EHTModelStacker.VonMisesWrap{Float64, Float64}}[]
     for i in eachindex(wrapped)
@@ -11,20 +11,19 @@ function build_model_all(θ::NamedTuple, mins, maxs, wrapped)
     #dists = EHTModelStacker.NormalFast.(μ, σ)
     transition = EHTModelStacker.MyProduct(dists)#EHTModelStacker.MvNormalFast(μ, Σ.^2)
     prior = EHTModelStacker.MvUniform(mins, maxs)
-    return SnapshotWeights(transition, prior)
+    return SnapshotWeights(transition, prior, batchsize)
 end
 
-function build_model_diag(θ::NamedTuple, mins, maxs, wrapped)
-    μ, σ = θ.μ, θ.σ
-    transition = EHTModelStacker.MvNormalFast(μ, σ.^2)
-    prior = EHTModelStacker.MvUniform(mins, maxs)
-    return SnapshotWeights(transition, prior)
+struct BatchStackerLklhd{C, T, B}
+    chain::C
+    min::T
+    max::T
+    wrapped::B
+    batchsize::Int
 end
 
-
-function build_loglklhd(build_model, chain, min, max, wrapped)
-    return function (θ::NamedTuple)
-        ws = build_model(θ, min, max, wrapped)
-        return lpdf(ws, chain)
-    end
+function (l::BatchStackerLklhd)(θ)
+    ws = SnapshotWeights(θ, l.min, l.max, l.wrapped, l.batchsize)
+    lapprox = lpdf(ws, l.chain)
+    return lapprox
 end

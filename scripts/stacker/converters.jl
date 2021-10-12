@@ -6,6 +6,8 @@ function loadmodel(dir)
         img = ROSESoss.mringwfloor(N=order,)
     elseif occursin("mring_gfloor_order", model)
         img = ROSESoss.mringwgfloor(N=order,)
+    elseif occursin("mring_gfloor_newprior_order", model)
+        img = ROSESoss.mringwgfloor(N=order,)
     elseif occursin("mring_order", model)
         img = ROSESoss.mring(N=order,)
     elseif occursin("mring_floor_stretch_order", model)
@@ -25,6 +27,40 @@ function _mkdf(echain, keys)
         insertcols!(df, Symbol("σ_"*String(k))=>getindex.(echain.σ, i))
     end
     df
+end
+
+function convertall(dir)
+    sdirs = filter(isdir, readdir(dir, join=true))
+    cfiles = joinpath.(sdirs, Ref("chain.h5"))
+    convert_antonio.(cfiles)
+end
+
+function convert_antonio(cfile, tmin=12.455, tmax=14.2)
+    println("Converting $cfile")
+    chain = ChainH5(cfile, (:img_diam, :img_fwhm, :img_mp_1))
+    btchain = restricttime(chain, tmin, tmax)
+    save_antonio(joinpath(dirname(cfile), "chain.txt"), btchain)
+end
+
+function save_antonio(out, chain::ChainH5)
+    diam = getparam(chain, :img_diam).chain
+    α = getparam(chain, :img_fwhm).chain
+    pa = getparam(chain, :img_mp_1).chain
+    name,ext = splitext(out)
+    times = chain.times
+    open(name*"_diam"*ext, "w") do io
+        for i in eachindex(times, diam)
+            pdiam = @. diam[i] - 1/(8*log(2))*α[i]^2/diam[i]
+            writedlm(io, [times[i] pdiam'])
+        end
+    end
+
+    open(name*"_pa"*ext, "w") do io
+        for i in eachindex(times, diam)
+            tmp = -rad2deg.(pa[i])
+            writedlm(io, [times[i] tmp'])
+        end
+    end
 end
 
 
@@ -70,7 +106,7 @@ function parsechainpath(cfile)
         push!(quants, Symbol("img_ma_$i"), Symbol("img_mp_$i"))
         push!(mins, 0.0, -1π)
         push!(maxs, 0.5, 1π)
-        push!(labels, "m=$i amp", "m=$i phase (rad) W of N")
+        push!(labels, "m=$i amp", "m=$i phase (deg) E of N")
         push!(wrapped, false, true)
     end
 

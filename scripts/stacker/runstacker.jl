@@ -5,7 +5,7 @@ using CairoMakie
 using PyCall
 using TupleVectors
 using HDF5
-@pyimport dynesty
+using ROSESoss
 
 using ParameterHandling
 using StatsBase
@@ -14,59 +14,44 @@ using Distributions
 using KernelDensity
 using HypercubeTransform
 using StaticArrays
-using Bijectors
 using RobustAdaptiveMetropolisSampler
-using EHTModelStacker: MvNormal2D, MvNormalFast
-using ROSESoss
+using EHTModelStacker: MvNormal2D, MvNormalFast, MvUniform
 using ArraysOfArrays
 using NamedTupleTools
+using BlackBoxOptim
 
 include(joinpath(@__DIR__,"build_prob.jl"))
 include(joinpath(@__DIR__,"converters.jl"))
 include(joinpath(@__DIR__,"plots.jl"))
-
-function constructlppt(build_model, mins, maxs, wrapped, chain)
-    @assert length(mins)==length(maxs)
-    @assert length(wrapped)==length(maxs)
-    priors = (μ = Product(Uniform.(mins, maxs)), σ = Product(Uniform.(0.01, maxs .- mins)))
-    t = ascube(priors)
-    p0 = HypercubeTransform.transform(t, fill(0.5, dimension(t)))
-    fp0, unflatten = ParameterHandling.flatten(p0)
-    lp = build_loglklhd(build_model, chain, mins, maxs, wrapped)∘unflatten
-    pt(x) = first(ParameterHandling.flatten(HypercubeTransform.transform(t, x)))
-    return lp, pt, unflatten, dimension(t)
-end
-
-function average_chain_diag(build_model, mins, maxs, wrapped, chain; nlive=1500)
-    lp, pt, unflatten, dim = constructlppt(build_model, mins, max, wrapped, chain)
-    sampler = dynesty.NestedSampler(lp, pt, dim, nlive=nlive)
-    sampler.run_nested()
-    res = sampler.results
-    samples, weights = res["samples"], exp.(res["logwt"] .- res["logz"][end])
-    tv = TupleVector([unflatten(Vector(x)) for x in eachrow(samples)])
-    echain = TupleVector(sample(tv, Weights(weights), 4000))
-    return echain
-
-end
+include(joinpath(@__DIR__, "inference.jl"))
 
 
-function quickprocess(cfile; plotres=true, tmin=0, tmax=1e30, nlive=1500)
-    mins, maxs, wrapped, quants, labels = parsechainpath(cfile)
-    outdir = joinpath(cfile, "ChainHA_W")
 
-    process(joinpath(cfile, "chain.h5"), mins, maxs, wrapped, quants, labels, outdir; plotres, tmin, tmax, nlive)
+
+
+function quickprocess(mdir; plotres=true, tmin=0, tmax=1e30, nsteps=500_000)
+    mins, maxs, wrapped, quants, labels = parsechainpath(mdir)
+    outdir = joinpath(mdir, "ChainHA_W")
+
+    process(joinpath(mdir, "chain.h5"), mins, maxs, wrapped, quants, labels, outdir; plotres, tmin, tmax, nsteps)
 
 end
 
 
 
 
-function process(cfile, mins, maxs, wrapped, quants, labels, outdir; plotres=true, tmin=0, tmax=1e30, nlive=1500)
+function process(cfile, mins, maxs, wrapped, quants, labels, outdir; plotres=true, tmin=0, tmax=24.0, nbatch=2_00, nsteps=2_000_000)
     #diameter
     mkpath(outdir)
-    chain = ChainH5(cfile, quants, 1_000)
+    chain = ChainH5(cfile, quants)
     chainall = restricttime(chain, tmin, tmax)
-    echain = average_chain_diag(build_model_all, mins, maxs, wrapped, chainall; nlive)
+    l = BatchStackerLklhd(chain, mins, maxs, wrapped, nbatch)
+    prior = (μ = Product(Uniform.(mins, maxs)), σ = Product(Uniform.(0.01, maxs .- mins)))
+    xbest, lmap = optimize(l, prior)
+    println("lmap is $lmap")
+    Minit = [0.01*(maxs .- mins)..., 0.001*(maxs .- mins)...]
+    tv, stats, M0 = sample(l, prior, RAM(M0=Minit, n=nsteps, show_progress=false), xbest)
+    echain = TupleVector(tv[end÷2:end]) #clip the first 50% of the chain
     df = _mkdf(echain, keys(chainall))
     df|>CSV.write(joinpath(outdir, replace(basename(cfile), ".h5"=>"_ha.csv")))
     if plotres
