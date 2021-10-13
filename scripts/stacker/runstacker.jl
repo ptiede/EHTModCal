@@ -47,7 +47,7 @@ function process(cfile, mins, maxs, wrapped, quants, labels, outdir; plotres=tru
     chainall = restricttime(chain, tmin, tmax)
     l = BatchStackerLklhd(chain, mins, maxs, wrapped, nbatch)
     prior = (μ = Product(Uniform.(mins, maxs)), σ = Product(Uniform.(0.01, maxs .- mins)))
-    xbest, lmap = optimize(l, prior)
+    xbest, lmap = ROSESoss.optimize(l, prior, ROSESoss.BBO(;maxevals=10_000, tracemode=:silent))
     println("lmap is $lmap")
     Minit = [0.01*(maxs .- mins)..., 0.001*(maxs .- mins)...]
     tv, stats, M0 = sample(l, prior, RAM(M0=Minit, n=nsteps, show_progress=false), xbest)

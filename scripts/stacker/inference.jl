@@ -8,7 +8,7 @@ Base.@kwdef struct RAM{T,P}
     show_progress::Bool = true
 end
 
-function ROSESoss.optimize(l::BatchStackerLklhd, prior::NamedTuple, opt = ROSESoss.BBO(;maxevals=75_000))
+function ROSESoss.optimize(l::BatchStackerLklhd, prior::NamedTuple, opt = ROSESoss.BBO(;maxevals=10_000))
     x0, unflatten = ParameterHandling.flatten((μ=rand(prior.μ), σ = rand(prior.σ)))
     function lpost(p)
         x = unflatten(p)

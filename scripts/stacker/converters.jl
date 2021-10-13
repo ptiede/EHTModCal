@@ -104,8 +104,8 @@ function parsechainpath(cfile)
 
     for i in 1:order
         push!(quants, Symbol("img_ma_$i"), Symbol("img_mp_$i"))
-        push!(mins, 0.0, -1π)
-        push!(maxs, 0.5, 1π)
+        push!(mins, 0.0, -2π)
+        push!(maxs, 0.5, 2π)
         push!(labels, "m=$i amp", "m=$i phase (deg) E of N")
         push!(wrapped, false, true)
     end
