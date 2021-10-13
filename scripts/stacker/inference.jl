@@ -30,7 +30,7 @@ function ROSESoss.optimize(l::BatchStackerLklhd, prior::NamedTuple, opt = ROSESo
     return unflatten(best_candidate(res)), -best_fitness(res)
 end
 
-function _getstart(p0)
+function _getstart(p0, prior)
     if isnothing(p0)
         x0, unflatten = ParameterHandling.flatten((μ=rand(prior.μ), σ = rand(prior.σ)))
     else
@@ -39,7 +39,7 @@ function _getstart(p0)
 end
 
 function StatsBase.sample(l::BatchStackerLklhd, prior::NamedTuple, s::RAM, p0=nothing)
-    x0, unflatten = _getstart(p0)
+    x0, unflatten = _getstart(p0, prior)
     function lpost(p)
         x = unflatten(p)
         lprior = logpdf(prior.μ, x.μ) + logpdf(prior.σ, x.σ)
