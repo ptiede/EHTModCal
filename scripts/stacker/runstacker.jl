@@ -50,7 +50,7 @@ function process(cfile, mins, maxs, wrapped, quants, labels, outdir; plotres=tru
     xbest, lmap = ROSESoss.optimize(l, prior, ROSESoss.BBO(;maxevals=10_000, tracemode=:silent))
     println("lmap is $lmap")
     Minit = [0.01*(maxs .- mins)..., 0.001*(maxs .- mins)...]
-    tv, stats, M0 = sample(l, prior, RAM(M0=Minit, n=nsteps, show_progress=false), xbest)
+    tv, stats, M0 = StatsBase.sample(l, prior, RAM(M0=Minit, n=nsteps, show_progress=false), xbest)
     echain = TupleVector(tv[end÷2:end]) #clip the first 50% of the chain
     df = _mkdf(echain, keys(chainall))
     df|>CSV.write(joinpath(outdir, replace(basename(cfile), ".h5"=>"_ha.csv")))
