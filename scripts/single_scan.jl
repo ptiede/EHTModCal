@@ -34,6 +34,8 @@ end
 function singlescan_vacp(obsfile,
                  outdir, scan,
                  model;
+                 tmin=0.0, 
+                 tmax=24.0,
                  kwargs...
                  )
 
@@ -46,6 +48,10 @@ function singlescan_vacp(obsfile,
     obs.add_amp(debias=true)
     #convert to ROSE EHTObservation objects
     ampobs = ROSESoss.extract_amps(obs)
+    if (ampobs[1].time < tmin) || (ampobs[1].time > tmax)
+      println("Not in good time skipping")
+      return nothing
+    end
     bl = ROSE.getdata(ampobs,:baselines)
     s1 = unique(first.(bl))
     s2 = unique(last.(bl))

@@ -1,33 +1,21 @@
 
 Base.@kwdef struct RAM{T,P}
-    M0::T
-    n::Int
+    M0::T = 0.1
+    n::Int = 100_000
     opt_α::Float64 = 0.234
     γ::Float64 = 0.667
     q::P = Normal()
     show_progress::Bool = true
 end
 
-function ROSESoss.optimize(l::BatchStackerLklhd, prior::NamedTuple, opt = ROSESoss.BBO(;maxevals=10_000))
-    x0, unflatten = ParameterHandling.flatten((μ=rand(prior.μ), σ = rand(prior.σ)))
-    function lpost(p)
-        x = unflatten(p)
-        lprior = logpdf(prior.μ, x.μ) + logpdf(prior.σ, x.σ)
-        isinf(lprior) && return Inf
-        return -l(x) - lprior
-    end
-
+function ROSESoss.optimize(l::BatchStackerLklhd, prior::NamedTuple, opt = ROSESoss.BBO(;maxevals=20_000))
     t = ascube(prior)
-    lower = ROSESoss.transform(t, zeros(dimension(t)))
-    lflat, _ = ParameterHandling.flatten(lower)
+    lp(x) = -l(HypercubeTransform.transform(t, x))
+    lp(rand(dimension(t)))
 
-    upper = ROSESoss.transform(t, ones(dimension(t)))
-    uflat, _ = ParameterHandling.flatten(upper)
-
-
-    bounds = [(lflat[i], uflat[i]) for i in eachindex(lflat, uflat)]
-    res = bboptimize(lpost, SearchRange=bounds, MaxFuncEvals=opt.maxevals, TraceMode=opt.tracemode)
-    return unflatten(best_candidate(res)), -best_fitness(res)
+    bounds = [(0.0, 1.0) for i in 1:dimension(t)]
+    res = bboptimize(lp, SearchRange=bounds, MaxFuncEvals=opt.maxevals, TraceMode=opt.tracemode)
+    return best_candidate(res), -best_fitness(res)
 end
 
 function _getstart(p0, prior)
@@ -38,19 +26,23 @@ function _getstart(p0, prior)
     end
 end
 
-function StatsBase.sample(l::BatchStackerLklhd, prior::NamedTuple, s::RAM, p0=nothing)
-    x0, unflatten = _getstart(p0, prior)
-    function lpost(p)
-        x = unflatten(p)
-        lprior = logpdf(prior.μ, x.μ) + logpdf(prior.σ, x.σ)
-        isinf(lprior) && return -Inf
-        return l(x) + lprior
-    end
-    println("Starting place ", x0)
-    println("starting value ", lpost(x0))
+function StatsBase.sample(l::BatchStackerLklhd, pr::NamedTuple, s::RAM, p0)
+    t = ascube(pr)
 
-    samples, stats, M0 = RAM_sample(lpost,
-                              x0,
+    # The famed julia closure bug!
+    function lp(x)
+        for i in x
+            if !(0.0 < i < 1.0)
+                return -Inf
+            end
+        end
+        l(HypercubeTransform.transform(t, x))
+    end
+    #compile the function because of julia bug I guess?
+    println("Starting place ", p0)
+    println("starting value ", lp(p0))
+    samples, stats, M0,_ = RAM_sample(lp,
+                              rand(dimension(t)),
                               s.M0,
                               s.n;
                               opt_α=s.opt_α,
@@ -58,7 +50,7 @@ function StatsBase.sample(l::BatchStackerLklhd, prior::NamedTuple, s::RAM, p0=no
                               q=s.q,
                               show_progress=s.show_progress
                             )
-    tv = TupleVector([unflatten(Vector(x)) for x in eachrow(samples)])
+    tv = TupleVector([HypercubeTransform.transform(t, x) for x in eachrow(samples)])
     return tv, stats, M0
 end
 
@@ -69,12 +61,12 @@ function StatsBase.sample(l::BatchStackerLklhd, prior::NamedTuple, s::DynestySta
     pt(x) = first(ParameterHandling.flatten(ROSESoss.transform(t, x)))
     lp = l∘unflatten
 
-    sampler = dynesty.NestedSampler(lp, pt, dimension(t), nlive=s.nlive)
+    sampler = ROSESoss.dynesty.NestedSampler(lp, pt, dimension(t), nlive=s.nlive)
     sampler.run_nested(;kwargs...)
     res = sampler.results
     samples, weights = res["samples"], exp.(res["logwt"] .- res["logz"][end])
     tv = TupleVector([unflatten(Vector(x)) for x in eachrow(samples)])
-    return tv, weights
+    return sample(tv, Weights(weights), 10_000)
 end
 
 #=
