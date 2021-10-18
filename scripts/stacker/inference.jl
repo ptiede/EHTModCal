@@ -8,7 +8,7 @@ Base.@kwdef struct RAM{T,P}
     show_progress::Bool = true
 end
 
-function ROSESoss.optimize(l::BatchStackerLklhd, prior::NamedTuple, opt = ROSESoss.BBO(;maxevals=20_000))
+function ROSESoss.optimize(l::BatchStackerLklhd, prior::NamedTuple, opt = ROSESoss.BBO(;maxevals=40_000))
     t = ascube(prior)
     lp(x) = -l(HypercubeTransform.transform(t, x))
     lp(rand(dimension(t)))
