@@ -1,13 +1,4 @@
 
-Base.@kwdef struct RAM{T,P}
-    M0::T = 0.1
-    n::Int = 100_000
-    opt_α::Float64 = 0.234
-    γ::Float64 = 0.667
-    q::P = Normal()
-    show_progress::Bool = true
-end
-
 function ROSESoss.optimize(l::BatchStackerLklhd, prior::NamedTuple, opt = ROSESoss.BBO(;maxevals=40_000))
     t = ascube(prior)
     lp(x) = -l(HypercubeTransform.transform(t, x))
@@ -26,7 +17,7 @@ function _getstart(p0, prior)
     end
 end
 
-function StatsBase.sample(l::BatchStackerLklhd, pr::NamedTuple, s::RAM, p0)
+function StatsBase.sample(l::BatchStackerLklhd, pr::NamedTuple, s::RAM, nsteps; kwargs...)
     t = ascube(pr)
 
     # The famed julia closure bug!
@@ -38,20 +29,16 @@ function StatsBase.sample(l::BatchStackerLklhd, pr::NamedTuple, s::RAM, p0)
         end
         l(HypercubeTransform.transform(t, x))
     end
-    #compile the function because of julia bug I guess?
+    #compile the function because of julia bug I guess
+    p0 = s.x
     println("Starting place ", p0)
     println("starting value ", lp(p0))
-    samples, stats, M0,_ = RAM_sample(lp,
-                              rand(dimension(t)),
-                              s.M0,
-                              s.n;
-                              opt_α=s.opt_α,
-                              γ=s.γ,
-                              q=s.q,
-                              show_progress=s.show_progress
-                            )
+    samples, stats, state,logprob = sample(lp,
+                                           s, nsteps;
+                                           kwargs...
+                                          )
     tv = TupleVector([HypercubeTransform.transform(t, x) for x in eachrow(samples)])
-    return tv, stats, M0
+    return tv, stats, state, logprob
 end
 
 function StatsBase.sample(l::BatchStackerLklhd, prior::NamedTuple, s::DynestyStatic; kwargs...)
