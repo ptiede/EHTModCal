@@ -54,7 +54,7 @@ function process(cfile, mins, maxs, wrapped, quants, labels, outdir; ckpt_stride
         println("Checkpoint stide > nsteps resetting")
         ckpt_stride = nsteps
     end
-    Minit = 0.01#[0.01*(maxs .- mins)..., 0.001*(maxs .- mins)...]
+    Minit = 0.001#[0.01*(maxs .- mins)..., 0.001*(maxs .- mins)...]
     smplr = RAM(p0, Minit)
     nbatches = nsteps÷ckpt_stride
     res = @timed sample(l, prior, smplr, ckpt_stride; show_progress=false, output_log_probability_x=true)
@@ -63,7 +63,7 @@ function process(cfile, mins, maxs, wrapped, quants, labels, outdir; ckpt_stride
     logp = res.value[4]
     println("Done batch 1 this took $(res.time) seconds")
     println("I am guessing this entire run will take $(res.time*nbatches/3600.0) hours to finish")
-    write_results(joinpath(outdir, replace(basename(cfile), ".h5"=>"_ha.csv")),tv, logp, keys)
+    write_results(joinpath(outdir, replace(basename(cfile), ".h5"=>"_ha_trunc.csv")),tv, logp, keys)
     for i in 2:nbatches
         println("On batch $i/$nbatches")
         tv_b,stats_b,state_b,logp_b = sample(l, prior, state, ckpt_stride; show_progress=false, output_log_probability_x=true)
@@ -71,7 +71,7 @@ function process(cfile, mins, maxs, wrapped, quants, labels, outdir; ckpt_stride
         push!(tv, tv_b...)
         push!(logp, logp_b...)
         state = state_b
-        write_results(joinpath(outdir, replace(basename(cfile), ".h5"=>"_ha.csv")), tv, logp, keys, stride=10)
+        write_results(joinpath(outdir, replace(basename(cfile), ".h5"=>"_ha_trunc.csv")), tv, logp, keys, stride=10)
     end
 
     return nothing
