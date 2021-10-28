@@ -38,6 +38,7 @@ StatsFuns = "4c63d2b9-4356-54db-8cca-17b64c39e42c"
 StatsPlots = "f3b207a7-027a-5e70-b257-86293d7955fd"
 StructArrays = "09ab397b-f2b6-538f-b94a-2f83cf4a842a"
 TupleVectors = "615932cf-77b6-4358-adcd-5b7eba981d7e"
+VIDA = "4096cdfb-f084-40a3-b02d-1a2a54920cb8"
 
 [compat]
 DrWatson = "2.2.1"

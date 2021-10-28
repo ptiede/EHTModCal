@@ -1,26 +1,39 @@
 using CairoMakie
 using ROSESoss
 using Measurements
+using EHTModelStacker
+using TupleVectors
+using ParameterHandling
+using StatsBase
+using CSV, DataFrames
+using HypercubeTransform
+using ArraysOfArrays
+using NamedTupleTools
+import Distributions as Dists
+using VIDA
+
+
+include("converters.jl")
 
 function meanframe(model, chain::ChainH5, sindx::Int, nsamples::Int)
     tv = getsnapshot_tv(chain, sindx)
     return meanframe(model, tv, nsamples)
 end
 
-function meanframe(model, tv::TupleVector, nsamples::Int; fov=150, npix=256)
+function meanframe(model, tv::TupleVector, nsamples::Int; fov=250, npix=256)
     inds = rand(1:length(tv), nsamples)
     simacc = ROSE.StokesImage(zeros(npix, npix), fov, fov)
     tmp = similar(simacc)
-    tst = tv[1]
     for i in inds
+        tst = tv[i]
         make_sim!(tmp, model, tst)
         simacc += tmp
     end
     return simacc./nsamples
 end
 
-function make_sim!(tmp, model, p::NamedTuple; fov=150, npix=256)
-    img = Soss.predict(model, p)
+function make_sim!(tmp, model, p::NamedTuple; fov=250, npix=256)
+    img = Soss.predict(model, delete(p, :logp))
     intensitymap!(tmp, img)
 end
 
@@ -76,9 +89,6 @@ function create_summary(dir, tmin=0.0, tmax=24.0)
     end
 end
 
-function StatsBase.mean_and_std(chain::ChainH5)
-
-end
 
 
 function plotlogz(dir, tavg; tmin=0.0, tmax=1e30, prepend="")
@@ -250,7 +260,7 @@ function summarize_snapshot(cfile; tmin=0.0, tmax=24.0, genmovie=false, prepend=
             fig = ridge2(getparam(chain, quants[i]))
         end
         fig.content[1].xlabel = labels[i]
-        display(fig)
+
         save(joinpath(dirname(cfile), "ridge_$(String(quants[i]))_$prepend.png"), fig)
     end
     if genmovie
@@ -258,20 +268,102 @@ function summarize_snapshot(cfile; tmin=0.0, tmax=24.0, genmovie=false, prepend=
     end
 end
 
-function summarize_ha(cfile)
+function plotdraw(cfile, outdir; ndraws=5)
     chainha = CSV.File(cfile) |> DataFrame
-    tv = df2tv(chainha)
+    tv = df2tv(chainha)[end÷2:end]
     m = loadmodel(dirname(dirname(cfile)))
     println(m)
 
-    fig = plotmeanim(m, tv, 100)
-    fig.current_axis.x.title = basename(dirname(dirname(cfile)))
-    display(fig)
-    save(joinpath(dirname(cfile), "mean_image.png"), fig)
+    mname = splitpath(cfile)[end-5]
 
-    fig = plotcollage(m, tv)
-    display(fig)
-    save(joinpath(dirname(cfile), "collage.png"), fig)
+    for i in 1:ndraws
+        params = tv[rand(1:length(tv))]
+
+        simg = ROSE.StokesImage(zeros(256, 256), 150.0, 150.0)
+        make_sim!(simg, m, params)
+
+        fig = Figure(;resolution=(400,400))
+        ax,hm = image(fig[1,1], ROSE.imagepixels(simg)..., simg',
+                       axis=(aspect=1, xreversed=true, xlabel="RA (μas)", ylabel="DEC (μas)",),
+                       colormap=:afmhot)
+        xlims!(ax, 75.0,-75.0)
+        ylims!(ax, -75.0,75.0)
+        save(joinpath(outdir, mname*"_draw_$i.png"), fig)
+    end
+
+
+end
+
+function plottrace(tv)
+    fig = Figure(;resolution=(1200, 800))
+    axes = [Axis(fig[i,j], xlabel=("MCMC step")) for i in 1:4, j in 1:2]
+
+    lines!(axes[1,1], tv.diam)
+    axes[1,1].ylabel = "Diameter (μas)"
+    lines!(axes[1,2], tv.fwhm)
+    axes[1,2].ylabel = "Ring width (μas)"
+
+    lines!(axes[2,1], tv.floor)
+    axes[2,1].ylabel = "Gauss. flux frac."
+    lines!(axes[2,2], tv.dg)
+    axes[2,2].ylabel = "Gauss. size (μas)"
+
+    lines!(axes[3,1], getindex.(tv.ma, 1))
+    axes[3,1].ylabel = "Amp m=1"
+    lines!(axes[3,2], rad2deg.(getindex.(tv.mp, 1)))
+    axes[3,2].ylabel = "Phase m=1 (deg)"
+
+    lines!(axes[4,1], tv.logp)
+    axes[4,1].ylabel = "log joint"
+    hidespines!(axes[4,2])
+
+    hidexdecorations!.(axes[1:3,1], grid=false, ticks=false)
+    hidexdecorations!.(axes[1:2,2], grid=false, ticks=false)
+    hidedecorations!(axes[4,2])
+    linkxaxes!(axes...)
+    rowgap!(fig.layout, 10.0)
+    return fig
+end
+
+
+function summarize_ha(cfile, outdir)
+    println(cfile)
+    mname = splitpath(cfile)[end-5]
+    if isfile(joinpath(outdir, mname*"_trace.png"))
+        return nothing
+    end
+
+    chainha = CSV.read(cfile, DataFrame, skipto=100_000)
+    tv = TupleVector(df2tv(chainha))
+    m = loadmodel(dirname(dirname(cfile)))
+    println(m)
+
+
+    dfsub = chainha[rand(1:nrow(chainha), 1000), :]
+    println("Converting to fractional flux")
+    mins = [0.0, 25.0, 1.0, 0.0, 40.0]
+    maxs = [5.0, 85.0, 40.0, 1.0, 200.0]
+    means, stds = construct_meanstd(dfsub, ["img_f", "img_diam", "img_fwhm", "img_floor", "img_dg"])
+    mff, sff = transform_sparam(floorfluxfrac, means, stds, mins, maxs)
+    insertcols!(dfsub, 1, :μ_img_fluxfrac => mff)
+    insertcols!(dfsub, findfirst(x->occursin("σ_img", x), names(dfsub)), :σ_img_fluxfrac => sff)
+    CSV.write( joinpath(outdir, mname*"_chain_ha_subsample.csv"), dfsub)
+
+    img = meanframe(m, tv, 400, fov=150.0, npix=256)
+    eimg = EHTImage(img)
+    save_fits(eimg, joinpath(outdir, mname*"_mean_image.fits"))
+    fig = Figure(;resolution=(400,400))
+    ax,hm = image(fig[1,1], ROSE.imagepixels(img)..., img',
+                    axis=(aspect=1, xreversed=true, xlabel="RA (μas)", ylabel="DEC (μas)",),
+                    colormap=:afmhot
+                 )
+    xlims!(ax, 75.0,-75.0)
+    ylims!(ax, -75.0,75.0)
+    fig.current_axis.x.title = basename(dirname(dirname(cfile)))
+    save(joinpath(outdir, mname*"_mean_image.png"), fig)
+
+    fig = plotcollage(m, tv, (5,5))
+    save(joinpath(outdir, mname*"_collage.png"), fig)
 
 
     fig = Figure(resolution=(400,400))
@@ -279,25 +371,38 @@ function summarize_ha(cfile)
     scatter!(ax, tv.diam, tv.fwhm./tv.diam, label="Delta diam")
     diamdb = @. tv.diam - 1/(4*log(2))*tv.fwhm^2/tv.diam
     scatter!(ax, diamdb, tv.fwhm./tv.diam, label="Peak diam")
+    xlims!(ax, 30.0, 70.0)
+    ylims!(ax, 0.0, 0.8)
+    axislegend(ax)
+    save(joinpath(outdir, mname*"_correlation.png"), fig)
 
+
+    fig = plottrace(tv)
+    save(joinpath(outdir, mname*"_trace.png"), fig)
+
+
+    GC.gc()
+    #=
     if occursin("_floor_order", cfile)
         scatter!(ax, tv.diam./(1 .+ 0.6*tv.floor), tv.fwhm./tv.diam, label="Effective diam")
     end
-    axislegend(ax)
-    xlims!(ax, 30.0, 70.0)
-    ylims!(ax, 0.0, 0.8)
     display(fig)
-    save(joinpath(dirname(cfile), "corr_image.png"), fig)
-
+    save(joinpath(outdir, mname*"_corr_image.png"), fig)
+    =#
     #fig = plotchi2(dirname(dirname(cfile)))
     #display(fig)
     #save(joinpath(dirname(cfile), "chi2_image.png"), fig)
 
 end
 
+function VIDA.EHTImage(img::ROSE.StokesImage; source="SgrA", ra=180.0, dec=0.0, wavelength=0.133, mjd=57814.0)
+    ny,nx = size(img)
+    return VIDA.EHTImage(nx, ny, -img.psizex, img.psizey, source, ra, dec, wavelength, mjd, img.im[:, end:-1:1])
+end
+
 function plotim(model, p::NamedTuple)
-    img = Soss.predict(model, p)
-    mim = intensitymap(img, 256, 256, 150.0, 150.0)
+    img = Soss.predict(model, delete(p,:logp))
+    mim = intensitymap(img, 256, 256, 250.0, 250.0)
     fig = Figure(resolution=(400,400))
     ax = Axis(fig[1,1], aspect=DataAspect(),xlabel="RA (μas)", ylabel="DEC (μas)", xreversed=true)
     image!(ax, ROSE.imagepixels(mim)..., mim', colormap=Reverse(:lajolla))
@@ -306,7 +411,7 @@ end
 
 
 function plotim!(ax, model, p::NamedTuple)
-    img = Soss.predict(model, p)
+    img = Soss.predict(model, delete(p, :logp))
     mim = intensitymap(img, 256, 256, 150.0, 150.0)
     image!(ax, ROSE.imagepixels(mim)..., mim', colormap=Reverse(:lajolla))
     lines!(ax, [10,60],[-60, -60], color=:white)

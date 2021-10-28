@@ -1,3 +1,5 @@
+using Distributions
+
 function loadmodel(dir)
     model = split(dir, "/")[end]
     order = parse(Int, split(model, "-")[end])
@@ -16,6 +18,43 @@ function loadmodel(dir)
         throw("model $model not found")
     end
     return img
+end
+
+function rand!(f, samples, dist)
+    for I in CartesianIndices(samples)
+        samples[I] = f(rand(dist))
+    end
+end
+
+
+function transform_sparam(f::T, means, stds, mins, maxs; nsamples=25_000) where {T}
+    tmean = zeros(length(means))
+    tstd = zeros(length(stds))
+    samples = zeros(nsamples)
+    for i in eachindex(means, stds)
+        dist = product_distribution(truncated.(Normal.(means[i], stds[i]), mins, maxs))
+        rand!(f, samples, dist)
+        tmean[i], tstd[i] = mean_and_std(samples)
+    end
+    return tmean, tstd
+end
+
+function construct_meanstd(df, labels::Vector{String})
+    means = [Tuple([df[i, "μ_"*l] for l in labels]) for i in 1:nrow(df)]
+    std = [Tuple([df[i, "σ_"*l] for l in labels]) for i in 1:nrow(df)]
+    return means, std
+end
+
+function floorfluxfrac(x::AbstractVector)
+    return @inbounds floorfluxfrac(x[1], x[2], x[3], x[4], x[5])
+end
+
+function floorfluxfrac(flux, diam, fwhm, floor, dg)
+    σg = dg/(2*sqrt(2*log(2)))
+    r = diam/2
+    fg = floor*flux
+    ff = fg*(1 - exp(-(r/σg)^2/2))
+    return ff/(ff + (1-floor)*flux)
 end
 
 function _mkdf(echain, keys)
@@ -68,18 +107,18 @@ function parsechainpath(cfile)
     model = split(cfile, "/")[end]
     mins = [25.0, #diam
             1.0, #width
-            0.0, #flux
+            0.8, #flux
             ]
     maxs = [85.0,
             40.0,
-            5.0
+            1.0
            ]
     quants = [:img_diam, :img_fwhm, :img_f]
     labels = ["diameter (μas)", "width (μas)", "flux (Jy)"]
     wrapped = Bool[false, false, false]
 
     if occursin("gfloor", model)
-        push!(mins, 0.0, 10.0)
+        push!(mins, 0.0, 40.0)
         push!(maxs, 1.0, 200.0)
         push!(quants, :img_floor, :img_dg)
         push!(wrapped, false, false)

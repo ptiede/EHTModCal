@@ -1,6 +1,6 @@
 using Pkg; Pkg.activate(".")
 using ClusterManagers, Distributed
-addprocs(SlurmManager(200), nodes="5", tasks_per_node="40", partition="ehtq")
+addprocs(SlurmManager(360), nodes="5", tasks_per_node="40", partition="ehtq")
 
 
 @everywhere begin
@@ -26,7 +26,7 @@ end
 function main()
   dlist = generatelist()
   pmap(dlist, on_error=e->println("Error $e")) do d
-      if isfile(joinpath(d, "ChainHA_2", "chain_ha.csv"))
+      if isfile(joinpath(d, "ChainHA_2", "chain_ha_trunc.csv"))
         println("Stacked chain exists skipping $d")
         return nothing
       end
