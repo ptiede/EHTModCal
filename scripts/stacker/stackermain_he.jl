@@ -17,7 +17,7 @@ using TupleVectors
 using Serialization
 
 include(joinpath(@__DIR__,"build_prob.jl"))
-include(joinpath(@__DIR__,"converters.jl"))
+include(joinpath(@__DIR__,"converters_he.jl"))
 include(joinpath(@__DIR__, "inference.jl"))
 
 
@@ -33,7 +33,7 @@ function create_lklhd(cfile, mins, maxs, wrapped, quants; tmin=0.0, tmax=24.0, n
     chain = ChainH5(cfile, quants)
     chainall = restricttime(chain, tmin, tmax)
     l = BatchStackerLklhd(chainall, mins, maxs, wrapped, nbatch)
-    prior = (μ = Product(Uniform.(mins, maxs)), σ = Product(Uniform.(0.01, 4.0*.(maxs .- mins))))
+    prior = (μ = Product(Uniform.(mins, maxs)), σ = Product(Uniform.(0.01, 4.0.*(maxs .- mins))))
 
     return l, prior, keys(chainall)
 end
