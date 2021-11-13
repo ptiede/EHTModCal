@@ -107,11 +107,11 @@ function parsechainpath(cfile)
     model = split(cfile, "/")[end]
     mins = [25.0, #diam
             1.0, #width
-            0.8, #flux
+            0.1, #flux
             ]
     maxs = [85.0,
             40.0,
-            1.0
+            4.0
            ]
     quants = [:img_diam, :img_fwhm, :img_f]
     labels = ["diameter (μas)", "width (μas)", "flux (Jy)"]
@@ -132,8 +132,8 @@ function parsechainpath(cfile)
     end
 
     if occursin("stretch", model)
-        push!(mins, 0.0, π/2)
-        push!(maxs, 0.5, -π/2)
+        push!(mins, 0.0, -π/2)
+        push!(maxs, 0.5, π/2)
         push!(quants, :img_τ, :img_ξτ)
         push!(labels, "ellipticity τ", "ellipticity PA (rad) W of N")
         push!(wrapped, false, true)

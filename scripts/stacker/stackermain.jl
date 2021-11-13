@@ -21,9 +21,9 @@ include(joinpath(@__DIR__,"converters.jl"))
 include(joinpath(@__DIR__, "inference.jl"))
 
 
-function quickprocess(mdir; restart=false, tmin=0.0, tmax=24.0, nbatch=1_000, ckpt_stride=100_000, nsteps=2_000_000)
+function quickprocess(mdir; restart=false, tmin=0.0, tmax=24.0, nbatch=1_000, ckpt_stride=100_000, nsteps=2_000_000, od = "ChainHA_HN")
     mins, maxs, wrapped, quants, labels = parsechainpath(mdir)
-    outdir = joinpath(mdir, "ChainHA_3")
+    outdir = joinpath(mdir, od)
 
     process(joinpath(mdir, "chain.h5"), mins, maxs, wrapped, quants, labels, outdir; restart, nbatch, ckpt_stride, tmin, tmax, nsteps)
 
@@ -33,7 +33,7 @@ function create_lklhd(cfile, mins, maxs, wrapped, quants; tmin=0.0, tmax=24.0, n
     chain = ChainH5(cfile, quants)
     chainall = restricttime(chain, tmin, tmax)
     l = BatchStackerLklhd(chainall, mins, maxs, wrapped, nbatch)
-    prior = (μ = Product(Uniform.(mins, maxs)), σ = Product(Uniform.(0.01, maxs .- mins)))
+    prior = (μ = Product(Uniform.(mins, maxs)), σ = Product(truncated.(Normal.(0.0, 0.25*(maxs .- mins)), 0.01, (maxs-mins))))
 
     return l, prior, keys(chainall)
 end
@@ -66,15 +66,10 @@ function process(cfile, mins, maxs, wrapped, quants, labels, outdir; restart=fal
     l, prior, keys = create_lklhd(cfile, mins, maxs, wrapped, quants; tmin=tmin, tmax=tmax, nbatch=nbatch)
     if !restart || !isfile(ckptfile)
 
-        p01, fmap1 = optimize(l, prior, ROSESoss.BBO(;maxevals=40_000))
-        p02, fmap2 = optimize(l, prior, ROSESoss.BBO(;maxevals=40_000))
-        println("After 2 runs the estiamte maps are $(fmap1) and $(fmap2)")
-        #Run twice and take better
-        if fmap1 > fmap2
-            p0 = p01
-        else
-            p0 = p02
-        end
+        res = map(_->optimize(l, prior, ROSESoss.BBO(;maxevals=50_000)), 1:5)
+        println("After 2 runs the estiamte maps are $(last.(res))")
+        p0 = res[argmax(last.(res))][1]
+
         if ckpt_stride > nsteps
             println("Checkpoint stide > nsteps resetting")
             ckpt_stride = nsteps

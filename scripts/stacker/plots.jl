@@ -117,7 +117,7 @@ function plotlogz(dir, tavg; tmin=0.0, tmax=1e30, prepend="")
 end
 
 
-function ridge2(ax, chain; amp=3.0, mod=(x->x), kdekwargs=(), )
+function ridge2(ax, chain; amp=4.0, mod=(x->x), kdekwargs=(), )
     times = chain.times
     my = Base.map(mod, chain.chain)
     xlow = minimum(minimum.(my))
@@ -135,7 +135,6 @@ function ridge2(ax, chain; amp=3.0, mod=(x->x), kdekwargs=(), )
             xhigh = k.x[end]
         end
     end
-    band!(ax, [xlow,xhigh], fill(13.25,2), fill(13.7,2), color=(:grey, 0.4))
     for t in times
         lines!(ax, [xlow, xhigh], fill(t,2), color=(:grey, 0.5), order=-1)
     end
@@ -146,13 +145,13 @@ function ridge2(ax, chain; amp=3.0, mod=(x->x), kdekwargs=(), )
         lower = fill(times[i], length(k.x))
         upper = times[i] .+ k.density*scl
         imax = argmax(upper)
-        band!(ax, k.x, lower, upper, linewidth=2.0, transparency=true, color=k.density, colormap=(:viridis, 0.75))
+        band!(ax, k.x, lower, upper, linewidth=2.0, transparency=true, color=k.density, colormap=(:viridis, 0.55))
         scatter!(ax, [k.x[imax]], [upper[imax]], color=:red, markersize=5.0)
         lines!(ax, k.x, upper, linewidth=0.5, color=(:black, 0.8))
     end
 
     xlims!(xlow, xhigh)
-    ax.yticks = times[1:4:end]
+    ax.yticks = round.(range(times[1], stop=times[end], length=10), digits=1)
     ax.ylabel = "Time (UT)"
     return ax
 end
@@ -329,9 +328,9 @@ end
 function summarize_ha(cfile, outdir)
     println(cfile)
     mname = splitpath(cfile)[end-5]
-    if isfile(joinpath(outdir, mname*"_trace.png"))
-        return nothing
-    end
+    #if isfile(joinpath(outdir, mname*"_trace.png"))
+    #    return nothing
+    #end
 
     chainha = CSV.read(cfile, DataFrame, skipto=100_000)
     tv = TupleVector(df2tv(chainha))
