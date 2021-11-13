@@ -1,0 +1,14 @@
+#!/bin/bash
+#SBATCH --account=def-abroderi
+#SBATCH --ntasks=84
+#SBATCH --mem-per-cpu=4096M
+#SBATCH --time=0-23:59
+#SBATCH -o "OUT3"
+#SBATCH -e "ERR3"
+# make the hostfile
+srun hostname -s > hostfilehilo
+sleep 5
+
+julia --project=@. --machine-file ./hostfilehilo runstacker_grmhd_gr_hilodiff.jl 4
+
+

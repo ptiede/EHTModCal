@@ -1,0 +1,14 @@
+#!/bin/bash
+#SBATCH --account=def-abroderi
+#SBATCH --ntasks=135
+#SBATCH --mem-per-cpu=4096M
+#SBATCH --time=0-23:59
+#SBATCH -o "OUT3"
+#SBATCH -e "ERR3"
+# make the hostfile
+srun hostname -s > hostfilep6
+sleep 5
+
+julia --project=@. --machine-file ./hostfilep6 runstacker_p6_gr.jl 4
+
+
