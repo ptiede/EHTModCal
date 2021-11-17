@@ -294,31 +294,50 @@ function plotdraw(cfile, outdir; ndraws=5)
 end
 
 function plottrace(tv)
-    fig = Figure(;resolution=(1200, 800))
-    axes = [Axis(fig[i,j], xlabel=("MCMC step")) for i in 1:4, j in 1:2]
-
-    lines!(axes[1,1], tv.diam)
+    fig = Figure(;resolution=(800, 1800))
+   
+    axes = [Axis(fig[i,j], xlabel=("MCMC step")) for i in 1:6, j in 1:2]
+    
+    axes[1,1].title = "Mean"
+    lines!(axes[1,1], tv.μ.diam)
     axes[1,1].ylabel = "Diameter (μas)"
-    lines!(axes[1,2], tv.fwhm)
+    lines!(axes[2,1], tv.μ.fwhm)
+    axes[2,1].ylabel = "Ring width (μas)"
+
+    lines!(axes[3,1], tv.μ.floor)
+    axes[3,1].ylabel = "Gauss. flux frac."
+    lines!(axes[4,1], tv.μ.dg)
+    axes[4,1].ylabel = "Gauss. size (μas)"
+
+    lines!(axes[5,1], getindex.(tv.μ.ma, 1))
+    axes[5,1].ylabel = "Amp m=1"
+    lines!(axes[6,1], rad2deg.(getindex.(tv.μ.mp, 1)))
+    axes[6,1].ylabel = "Phase m=1 (deg)"
+
+
+
+    axes[1,1].title = "Std Dev."
+    lines!(axes[1,2], tv.σ.diam)
+    axes[1,1].ylabel = "Diameter (μas)"
+    lines!(axes[2,2], tv.σ.fwhm)
     axes[1,2].ylabel = "Ring width (μas)"
 
-    lines!(axes[2,1], tv.floor)
+    lines!(axes[3,2], tv.σ.floor)
     axes[2,1].ylabel = "Gauss. flux frac."
-    lines!(axes[2,2], tv.dg)
+    lines!(axes[4,2], tv.σ.dg)
     axes[2,2].ylabel = "Gauss. size (μas)"
 
-    lines!(axes[3,1], getindex.(tv.ma, 1))
+    lines!(axes[5,2], getindex.(tv.σ.ma, 1))
     axes[3,1].ylabel = "Amp m=1"
-    lines!(axes[3,2], rad2deg.(getindex.(tv.mp, 1)))
+    lines!(axes[6,2], rad2deg.(getindex.(tv.σ.mp, 1)))
     axes[3,2].ylabel = "Phase m=1 (deg)"
 
-    lines!(axes[4,1], tv.logp)
-    axes[4,1].ylabel = "log joint"
-    hidespines!(axes[4,2])
+    ax = Axis(fig[7,:], xlabel=("MCMC step"))
+    lines!(ax, tv.σ.logp)
+    ax.ylabel = "log joint"
 
-    hidexdecorations!.(axes[1:3,1], grid=false, ticks=false)
-    hidexdecorations!.(axes[1:2,2], grid=false, ticks=false)
-    hidedecorations!(axes[4,2])
+    hidexdecorations!.(axes[1:5,1], grid=false, ticks=false)
+    hidexdecorations!.(axes[1:5,2], grid=false, ticks=false)
     linkxaxes!(axes...)
     rowgap!(fig.layout, 10.0)
     return fig
@@ -348,7 +367,7 @@ function summarize_ha(cfile, outdir)
     insertcols!(dfsub, findfirst(x->occursin("σ_img", x), names(dfsub)), :σ_img_fluxfrac => sff)
     CSV.write( joinpath(outdir, mname*"_chain_ha_subsample.csv"), dfsub)
 
-    img = meanframe(m, tv, 400, fov=150.0, npix=256)
+    img = meanframe(m, tv.μ, 400, fov=150.0, npix=256)
     eimg = EHTImage(img)
     save_fits(eimg, joinpath(outdir, mname*"_mean_image.fits"))
     fig = Figure(;resolution=(400,400))
@@ -361,15 +380,15 @@ function summarize_ha(cfile, outdir)
     fig.current_axis.x.title = basename(dirname(dirname(cfile)))
     save(joinpath(outdir, mname*"_mean_image.png"), fig)
 
-    fig = plotcollage(m, tv, (5,5))
+    fig = plotcollage(m, tv.μ, (5,5))
     save(joinpath(outdir, mname*"_collage.png"), fig)
 
 
     fig = Figure(resolution=(400,400))
     ax = Axis(fig[1,1], xlabel="Diameter", ylabel="fractional width")
-    scatter!(ax, tv.diam, tv.fwhm./tv.diam, label="Delta diam")
-    diamdb = @. tv.diam - 1/(4*log(2))*tv.fwhm^2/tv.diam
-    scatter!(ax, diamdb, tv.fwhm./tv.diam, label="Peak diam")
+    scatter!(ax, tv.μ.diam, tv.μ.fwhm./tv.μ.diam, label="Delta diam")
+    diamdb = @. tv.μ.diam - 1/(4*log(2))*tv.μ.fwhm^2/tv.μ.diam
+    scatter!(ax, diamdb, tv.μ.fwhm./tv.μ.diam, label="Peak diam")
     xlims!(ax, 30.0, 70.0)
     ylims!(ax, 0.0, 0.8)
     axislegend(ax)
