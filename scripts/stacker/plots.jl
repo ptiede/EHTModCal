@@ -11,7 +11,7 @@ using ArraysOfArrays
 using NamedTupleTools
 import Distributions as Dists
 using VIDA
-
+using KernelDensity
 
 include("converters.jl")
 
@@ -316,21 +316,13 @@ function plottrace(tv)
 
 
 
-    axes[1,1].title = "Std Dev."
+    axes[1,2].title = "Std Dev."
     lines!(axes[1,2], tv.σ.diam)
-    axes[1,1].ylabel = "Diameter (μas)"
     lines!(axes[2,2], tv.σ.fwhm)
-    axes[1,2].ylabel = "Ring width (μas)"
-
     lines!(axes[3,2], tv.σ.floor)
-    axes[2,1].ylabel = "Gauss. flux frac."
     lines!(axes[4,2], tv.σ.dg)
-    axes[2,2].ylabel = "Gauss. size (μas)"
-
     lines!(axes[5,2], getindex.(tv.σ.ma, 1))
-    axes[3,1].ylabel = "Amp m=1"
     lines!(axes[6,2], rad2deg.(getindex.(tv.σ.mp, 1)))
-    axes[3,2].ylabel = "Phase m=1 (deg)"
 
     ax = Axis(fig[7,:], xlabel=("MCMC step"))
     lines!(ax, tv.σ.logp)
@@ -386,10 +378,12 @@ function summarize_ha(cfile, outdir)
 
     fig = Figure(resolution=(400,400))
     ax = Axis(fig[1,1], xlabel="Diameter", ylabel="fractional width")
-    scatter!(ax, tv.μ.diam, tv.μ.fwhm./tv.μ.diam, label="Delta diam")
+    k1 = kde((tv.μ.diam, tv.μ.fwhm./tv.μ.diam))
+    contourf!(ax, k1.x, k1.y, k1.density, label="Delta diam", levels=range(0.05, 1.0, length=4), mode=:relative, colormap=:Blues_4)
     diamdb = @. tv.μ.diam - 1/(4*log(2))*tv.μ.fwhm^2/tv.μ.diam
-    scatter!(ax, diamdb, tv.μ.fwhm./tv.μ.diam, label="Peak diam")
-    xlims!(ax, 30.0, 70.0)
+    k2 = kde((diamdb, tv.μ.fwhm./diamdb))
+    contourf!(ax, k2.x, k2.y, k2.density, label="Delta diam", levels=range(0.05, 1.0, length=4), mode=:relative, colormap=:Oranges_4)
+    xlims!(ax, 25.0, 85.0)
     ylims!(ax, 0.0, 0.8)
     axislegend(ax)
     save(joinpath(outdir, mname*"_correlation.png"), fig)

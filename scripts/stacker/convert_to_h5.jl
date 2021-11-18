@@ -10,14 +10,14 @@ function getparamnames(fname)
     rhigh = parse(Float64, tmp[5][3:end])
     inclination = parse(Float64, tmp[6][2:end])
     band = tmp[end]
-    return (;day, band, mflux, rhigh, spin, inclination)
+    return (;day, band, mflux, rhigh, spin, inc)
 end
 
 
 function createh5(flist, truths, order, outname, nsamples=1000)
     samples = zeros(length(flist), nsamples)
     for (i,f) in enumerate(flist)
-        df = CSV.read(joinpath(f, "snapshot_120/noisefrac0.02/mring_gfloor_order-$order", "ChainHA_3/chain_ha_trunc.csv"), DataFrame)
+        df = CSV.read(joinpath(f, "snapshot_120/noisefrac0.02/mring_gfloor_order-$order", "ChainHA_HN/chain_ha_trunc.csv"), DataFrame)
         s = df[end÷2:end, :μ_img_diam]
         samples[i, :] .= sample(s, nsamples)
     end

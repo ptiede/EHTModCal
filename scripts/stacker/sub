@@ -1,14 +1,16 @@
 #!/bin/bash
-#SBATCH --account=def-abroderi
-#SBATCH --ntasks=360
-#SBATCH --mem-per-cpu=4096M
-#SBATCH --time=0-23:59
-#SBATCH -o "OUT3"
-#SBATCH -e "ERR3"
+#SBATCH --ntasks 1 # Number of cores requested
+#SBATCH -t 0-5:59:59 # Runtime in minutes
+#SBATCH -p blackhole # Partition to submit to
+#SBATCH --mem-per-cpu=4G
+#SBATCH -o out.out # Standard out goes to this file
+#SBATCH -e err.err # Standard err goes to this filehostname
+
 # make the hostfile
-srun hostname -s > hostfile3
+srun hostname -s > hostfile4
 sleep 5
 
-julia --project=@. --machine-file ./hostfile3 runstacker_grmhd_gr.jl 3
+module restore
+julia make_summary_ha.jl
 
 

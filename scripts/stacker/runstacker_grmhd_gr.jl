@@ -1,17 +1,17 @@
 using Pkg
-Pkg.activate("/scratch/ptiede/SgrA/EHTModCal/scripts/stacker")
+Pkg.activate("/n/holyscratch01/doeleman_lab/ptiede/EHTModCal/scripts/stacker")
 
 @everywhere begin
-  using Pkg; Pkg.activate("/scratch/ptiede/SgrA/EHTModCal/scripts/stacker")
+  using Pkg; Pkg.activate("/n/holyscratch01/doeleman_lab/ptiede/EHTModCal/scripts/stacker")
 end
-@everywhere include(joinpath("/scratch/ptiede/SgrA/EHTModCal/scripts/stacker", "stackermain.jl"))
+@everywhere include(joinpath("/n/holyscratch01/doeleman_lab/ptiede/EHTModCal/scripts/stacker", "stackermain.jl"))
 
 using Comonicon
 
 
 
 function generatelist(order)
-  dirs = filter(x->isdir(x)&&startswith(basename(x), "hops"), readdir("/scratch/ptiede/SgrA/EHTModCal/GRMHDCal", join=true))
+  dirs = filter(x->isdir(x)&&startswith(basename(x), "hops"), readdir("/n/holyscratch01/doeleman_lab/ptiede/EHTModCal/GRMHDCal", join=true))
   dlist = String[]
   for d in dirs
       tmp = filter(x->occursin("gfloor_order-$(order)", x), readdir(joinpath(d, "snapshot_120/noisefrac0.02"), join=true))
