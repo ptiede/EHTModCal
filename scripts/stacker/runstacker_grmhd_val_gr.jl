@@ -10,8 +10,8 @@ using Comonicon
 
 
 
-function generatelist(order)
-  dirs = filter(x->startswith(basename(x), "hops"), readdir("/scratch/ptiede/SgrA/EHTModCal/GRMHDVal", join=true))
+function generatelist(order=2)
+  dirs = filter(x->startswith(basename(x), "hops"), readdir("/scratch/ptiede/SgrA/EHTModCal/GRMHDValHe", join=true))
   dlist = String[]
   for d in dirs
       tmp = filter(x->occursin("gfloor_order-$(order)", x), readdir(joinpath(d, "snapshot_120/noisefrac0.02"), join=true))
@@ -29,7 +29,7 @@ Runs the GRMHD stacker for some m-ring order
 
 - `o`: The mring order you can to analyze
 """
-@main function main(o::Int)
+@main function main(o::Int=2)
   dlist = generatelist(o)
   println(dlist)
   pmap(dlist) do d

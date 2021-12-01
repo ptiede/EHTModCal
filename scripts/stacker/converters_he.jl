@@ -134,8 +134,29 @@ function getsnapshot_tv(chain::ChainH5, i::Int)
     return TupleVector(ntproto((imgt..., ma, mp)))
 end
 
-
 function df2tv(df::DataFrame)
+	return TupleVector((μ = df2tv_mean(df), σ = df2tv_std(df)))
+end
+
+
+function df2tv_std(df::DataFrame)
+    nms = filter(x->!(occursin("μ_img_", x)), names(df))
+    iimg = findall(x->occursin("σ_img_",x), nms)
+    inon = findall(x->!((occursin("σ_img_mp_",x)||occursin("σ_img_ma_",x))&&occursin("σ_img_", x)), nms)
+    order = length(findall(x->occursin("σ_img_ma_",x), nms))
+    ks = Symbol.(last.(split.(nms[inon], Ref("σ_img_"))))
+    ntproto = namedtuple(ks..., :ma, :mp)
+    ma = zeros(order, nrow(df))
+    mp = zeros(order, nrow(df))
+    for i in 1:order
+        ma[i,:] = getproperty(df, Symbol("σ_img_ma_$i"))
+        mp[i,:] = getproperty(df, Symbol("σ_img_mp_$i"))
+    end
+    imgt = Tuple(getproperty(df, Symbol(k)) for k in nms[inon])
+    return ntproto(imgt..., nestedview(ma), nestedview(mp))
+end
+
+function df2tv_mean(df::DataFrame)
     nms = filter(x->!(occursin("σ_img_", x)), names(df))
     iimg = findall(x->occursin("μ_img_",x), nms)
     inon = findall(x->!((occursin("μ_img_mp_",x)||occursin("μ_img_ma_",x))&&occursin("μ_img_", x)), nms)
@@ -149,5 +170,5 @@ function df2tv(df::DataFrame)
         mp[i,:] = getproperty(df, Symbol("μ_img_mp_$i"))
     end
     imgt = Tuple(getproperty(df, Symbol(k)) for k in nms[inon])
-    return TupleVector(ntproto(imgt..., nestedview(ma), nestedview(mp)))
+    return ntproto(imgt..., nestedview(ma), nestedview(mp))
 end

@@ -171,7 +171,7 @@ end
 
 function df2tv(df::DataFrame)
 	return TupleVector((μ = df2tv_mean(df), σ = df2tv_std(df)))
-end 
+end
 
 
 function df2tv_std(df::DataFrame)
